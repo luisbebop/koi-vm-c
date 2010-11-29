@@ -38,15 +38,20 @@
 #define _SWAPI(x) (((int) x))
 #endif
 
-#define STACKSIZE 100 
-#define INTGR	1 
-#define FLT	2 
-#define STRING	3
-#define BYTE 4 
+#define STACKSIZE 100
+
+/* etype's from StackElement */
+#define NIL_		0
+#define BOOL_		1
+#define INTEGER_	2
+#define FLOAT_		3
+#define	STRING_		4
+#define	HASH_		5
+#define FUNCTION_	16
 
 typedef struct selement *StackElementPtr;
 typedef struct selement {
-    int etype; /* etype == INTGR, FLT ou STRING */
+    int etype;
 	int size;
     union { 
         int ival; 
@@ -62,22 +67,45 @@ typedef struct stack {
     StackElement items[STACKSIZE];
 }Stack;
 
+typedef struct istack *Int32StackPtr;
+typedef struct istack
+{
+	Int32 top;
+	Int32 items[STACKSIZE];
+}Int32Stack;
+
 Bool push_string_to_stack_from_tabledata(int index_tabledata);
 void ins_gets(void);
 void ins_push_string(void);
+void ins_set_local(void);
+void ins_get_local(void);
+void ins_return(void);
+void ins_call(void);
 void ins_print(void);
+void ins_push_function(void);
 void define_vm_instructions(void);
 Int32 load_file_in_opcodes_memory(char * filename);
+
 Bool stack_is_empty(StackPtr ps);
-StackElementPtr stack_pop(StackPtr ps);
+StackElement stack_pop(StackPtr ps);
 void stack_push(StackPtr ps, StackElement value);
+Bool int_stack_is_empty(Int32StackPtr ps);
+Int32 int_stack_pop(Int32StackPtr ps);
+void int_stack_push(Int32StackPtr ps, Int32 value);
+
 void vm_run(Int32 opcode_size);
 /* end .h */
 
 /* vm instructions */
-#define PUSH_STRING 4
-#define PRINT		120
-#define GETS		121
+#define PUSH_STRING		4
+#define PRINT			120
+#define GETS			121
+#define SET_LOCAL		140
+#define GET_LOCAL		141
+#define PUSH_FUNCTION	160
+#define END_FUNCTION	161
+#define CALL			162
+#define	RETURN			163
 
 /* vm globals */
 /*
@@ -106,25 +134,52 @@ Int32 opcodes[200 * 1024];
 Byte tabledata[200 * 1024];
 void (*instruction[200])(void);
 Stack vm_data_stack;
+Stack vm_local_data_stack;
+Int32Stack vm_return_stack;
 
 Bool stack_is_empty(StackPtr ps)
 {
-    if (ps->top == -1)
+	if (ps->top == -1)
         return TRUE;
     else
         return FALSE;
 }
 
-StackElementPtr stack_pop(StackPtr ps)
+StackElement stack_pop(StackPtr ps)
 {
-    if (stack_is_empty(ps))
+    StackElement element;
+	
+	element.etype = -1;
+	if (stack_is_empty(ps))
     {
-        return NULL;
+        return element;
     }
-    return &ps->items[ps->top--];
+    return ps->items[ps->top--];
 }
 
 void stack_push(StackPtr ps, StackElement value)
+{
+    ps->items[++(ps->top)] = value;
+}
+
+Bool int_stack_is_empty(Int32StackPtr ps)
+{
+	if (ps->top == -1)
+        return TRUE;
+    else
+        return FALSE;
+}
+
+Int32 int_stack_pop(Int32StackPtr ps)
+{
+	if (int_stack_is_empty(ps))
+    {
+        return -1;
+    }
+    return ps->items[ps->top--];
+}
+
+void int_stack_push(Int32StackPtr ps, Int32 value)
 {
     ps->items[++(ps->top)] = value;
 }
@@ -141,7 +196,7 @@ Bool push_string_to_stack_from_tabledata(int index_tabledata)
 	/* endianess problem ??? */
 	size_string = MAKEWORD(tabledata[index_tabledata+1],tabledata[index_tabledata+2]);
 	
-	element.etype = STRING;
+	element.etype = STRING_;
 	element.size = size_string;
 	element.element.pval = &tabledata[index_tabledata+3];
 	stack_push(&vm_data_stack,element);
@@ -152,11 +207,11 @@ void ins_gets(void)
 {
 	char buf[20];
 	StackElement element;
-	
+
 	memset(buf,0,sizeof(buf));
 	gets(buf);
 	
-	element.etype = STRING;
+	element.etype = STRING_;
 	element.size = strlen(buf);
 	element.element.pval = malloc(element.size);
 	memcpy(element.element.pval, buf,element.size);
@@ -189,14 +244,107 @@ void ins_push_string(void)
 	 */
 }
 
+void ins_push_function(void)
+{
+	StackElement element;
+	Int32 function_id = 0;
+	Int32 i = 0;
+	
+	element.etype = FUNCTION_;
+	element.element.ival = instruction_pointer + 2;
+	stack_push(&vm_data_stack,element);	
+	function_id = _SWAPI(opcodes[instruction_pointer + 1]);
+	for (i = instruction_pointer; 42; i += 1) {
+		if (_SWAPI(opcodes[i]) == END_FUNCTION && _SWAPI(opcodes[i+1]) == 0 && _SWAPI(opcodes[i+2]) == END_FUNCTION && _SWAPI(opcodes[i+3]) == function_id) 
+		{
+			break;
+		}
+	}
+	instruction_pointer = i + 4;
+	
+	/*
+	@@instruction[PUSH_FUNCTION] = Proc.new() do |vm|
+		vm.data_stack.push([FUNCTION_, vm.instruction_pointer + 2])
+		function_id = vm.opcodes[vm.instruction_pointer + 1]
+		while(true)
+			vm.instruction_pointer = vm.opcodes.slice(vm.instruction_pointer, vm.opcodes.length).index(END_FUNCTION) + vm.instruction_pointer
+			if(vm.opcodes.slice(vm.instruction_pointer, 4) == [END_FUNCTION, 0, END_FUNCTION, function_id])
+				break
+			else
+				vm.instruction_pointer = vm.instruction_pointer + 1
+			end
+		end
+		vm.instruction_pointer = vm.instruction_pointer + 4
+	end
+	*/
+}
+
+void ins_set_local(void)
+{
+	vm_local_data_stack.items[_SWAPI(opcodes[instruction_pointer+1])] = stack_pop(&vm_data_stack);
+	instruction_pointer = instruction_pointer + 2;
+	/*
+	@@instruction[SET_LOCAL] = Proc.new() do |vm|
+		raise StackError, "Expecting at least one item on the data stack" unless(vm.data_stack.length > 0)
+		vm.locals[vm.opcodes[vm.instruction_pointer + 1]] = vm.data_stack.pop
+		vm.instruction_pointer = vm.instruction_pointer + 2
+	end
+	*/
+}
+
+void ins_get_local(void)
+{
+	StackElement element;
+	
+	element = vm_local_data_stack.items[_SWAPI(opcodes[instruction_pointer + 1])];
+	stack_push(&vm_data_stack,element);
+	instruction_pointer  = instruction_pointer + 2;
+	/*
+	@@instruction[GET_LOCAL] = Proc.new() do |vm|
+		vm.data_stack.push( vm.locals[vm.opcodes[vm.instruction_pointer + 1]] )
+		vm.instruction_pointer = vm.instruction_pointer + 2
+	end
+	*/
+}
+
+void ins_return(void)
+{
+	instruction_pointer = int_stack_pop(&vm_return_stack);
+	/*
+	@@instruction[RETURN] = Proc.new() do |vm|
+		raise ReturnStackError, "Expecting at least one item on the return stack" unless(vm.return_stack.length > 0)
+		vm.instruction_pointer = vm.return_stack.pop
+		vm.decrement_scope
+	end
+	*/
+}
+
+void ins_call(void)
+{
+	StackElement element;
+	
+	int_stack_push(&vm_return_stack, instruction_pointer + 1);
+	element = stack_pop(&vm_data_stack);
+	instruction_pointer = element.element.ival;
+	/*
+	@@instruction[CALL] = Proc.new() do |vm|
+		raise StackError, "Expecting at least one item on the data stack" unless(vm.data_stack.length > 0)
+		raise StackError, "Expecting function" unless(vm.data_stack[-1][0] == FUNCTION_)
+		vm.return_stack.push( vm.instruction_pointer + 1 )
+		vm.instruction_pointer = vm.data_stack.pop[1]
+		vm.increment_scope
+	end
+	*/
+}
+
 void ins_print(void)
 {
-	StackElementPtr element;
+	StackElement element;
 	char buf[256]; //change to malloc based on element.size;
 	
 	memset(buf,0,sizeof(buf));
 	element = stack_pop(&vm_data_stack);
-	memcpy(buf,element->element.pval, element->size);
+	memcpy(buf,element.element.pval, element.size);
 	printf("%s\n",buf);
 	instruction_pointer += 1;
 	
@@ -216,6 +364,11 @@ void define_vm_instructions(void)
 	instruction[PUSH_STRING] = ins_push_string;
 	instruction[PRINT] = ins_print;
 	instruction[GETS] = ins_gets;
+	instruction[PUSH_FUNCTION] = ins_push_function;
+	instruction[GET_LOCAL] = ins_get_local;
+	instruction[SET_LOCAL] = ins_set_local;
+	instruction[CALL] = ins_call;
+	instruction[RETURN] = ins_return;
 }
 
 Int32 load_file_in_opcodes_memory(char * filename)
@@ -257,7 +410,7 @@ void vm_run(Int32 opcode_size)
 	while (instruction_pointer < opcode_size)
 	{
 		//call to function pointer
-		(*instruction[opcodes[instruction_pointer]])();
+		(*instruction[_SWAPI(opcodes[instruction_pointer])])();
 	}
 }
 
