@@ -49,7 +49,6 @@
 #define	HASH_		5
 #define FUNCTION_	16
 
-typedef struct selement *StackElementPtr;
 typedef struct selement {
     int etype;
 	int size;
@@ -60,6 +59,70 @@ typedef struct selement {
         unsigned char *pval;
     } element;
 } StackElement;
+
+typedef struct snodeelement *StackNodeElementPtr;
+typedef struct snodeelement
+{
+	StackElement data;
+	StackNodeElementPtr link;
+} StackNodeElement;
+
+StackNodeElementPtr vm_data_stack_top = NULL;
+StackNodeElementPtr vm_local_data_stack_top = NULL;
+
+StackNodeElementPtr stack_init_dym()
+{
+	StackNodeElementPtr first_node;
+	
+	first_node = (StackNodeElementPtr)malloc(sizeof(StackNodeElement));
+	if (first_node) 
+	{
+		first_node->link = NULL;
+		return(first_node);
+	}
+	else 
+	{
+		printf("Memory Out of Space");
+		return NULL;
+	}
+}
+
+void stack_push_dym(StackNodeElementPtr top, StackElement value)
+{
+	StackNodeElementPtr x;
+	x = (StackNodeElementPtr)malloc(sizeof(StackNodeElement));
+	if (x == NULL) 
+	{
+		printf("Memory Out of Space");
+        return;
+	}
+	else 
+	{
+		x->data = value;
+		x->link = top->link;
+		top->link = x;
+	}
+}
+
+StackElement stack_pop_dym(StackNodeElementPtr top)
+{
+	StackElement a;
+	StackNodeElementPtr p;
+	
+	if(top->link == NULL)
+	{
+		a.etype = -1;
+		printf("Stack Empty ...");
+	}
+	else 
+	{
+		a = vm_data_stack_top->link->data;
+		p = vm_data_stack_top->link;
+		vm_data_stack_top->link = p->link;
+		free(p);
+	}
+	return (a);
+}
 
 typedef struct stack *StackPtr;
 typedef struct stack {
@@ -414,10 +477,29 @@ void vm_run(Int32 opcode_size)
 	}
 }
 
-int main()
+int main_old()
 {
 	Int32 opcode_size = 0;
 	opcode_size = load_file_in_opcodes_memory("helloworld.exe");
 	vm_run(opcode_size);
 	return 0;
+}
+
+int main()
+{
+	StackElement s, z, a, b, c;
+	
+	vm_data_stack_top = stack_init_dym();
+	
+	s.etype = INTEGER_;
+	s.element.ival = 666;
+	stack_push_dym(vm_data_stack_top, s);
+	
+	z.etype = INTEGER_;
+	z.element.ival = 777;
+	stack_push_dym(vm_data_stack_top, z);
+	
+	a = stack_pop_dym(vm_data_stack_top);
+	b = stack_pop_dym(vm_data_stack_top);
+	c = stack_pop_dym(vm_data_stack_top);
 }

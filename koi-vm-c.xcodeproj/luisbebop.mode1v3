@@ -216,10 +216,10 @@
 						<key>_historyCapacity</key>
 						<integer>0</integer>
 						<key>bookmark</key>
-						<string>874B478F12A4343200D58457</string>
+						<string>874B481912A6D58400D58457</string>
 						<key>history</key>
 						<array>
-							<string>874B478E12A4343200D58457</string>
+							<string>874B47FA12A555C800D58457</string>
 						</array>
 					</dict>
 					<key>SplitCount</key>
@@ -235,7 +235,7 @@
 				<key>PBXModuleWindowStatusBarHidden2</key>
 				<false/>
 				<key>RubberWindowFrame</key>
-				<string>2 60 1278 718 0 0 1280 778 </string>
+				<string>44 57 1278 718 0 0 1280 778 </string>
 			</dict>
 		</dict>
 	</array>
@@ -368,7 +368,7 @@
 										<key>_historyCapacity</key>
 										<integer>0</integer>
 										<key>bookmark</key>
-										<string>874B478D12A4343200D58457</string>
+										<string>874B481812A6D58400D58457</string>
 										<key>history</key>
 										<array>
 											<string>87D1A063129CB1E1009EFDF7</string>
@@ -586,19 +586,17 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>874B479012A4343200D58457</string>
 		<string>874B478412A42BAF00D58457</string>
 		<string>874B478312A42B6400D58457</string>
 		<string>874B478212A42A5B00D58457</string>
 		<string>874B476712A4069500D58457</string>
 		<string>874B473B12A3EDEB00D58457</string>
 		<string>874B473C12A3EDEB00D58457</string>
+		<string>1C78EAAD065D492600B07095</string>
 		<string>874B470912A3D7B800D58457</string>
 		<string>1C530D57069F1CE1000CFCEE</string>
 		<string>1CD10A99069EF8BA00B06720</string>
 		<string>87D1A007129CAF12009EFDF7</string>
-		<string>1C78EAAD065D492600B07095</string>
-		<string>/Users/luisbebop/Documents/c/koi-vm-c/koi-vm-c.xcodeproj</string>
 		<string>874B470212A3D78E00D58457</string>
 	</array>
 	<key>WindowString</key>
@@ -975,7 +973,7 @@
 			<key>WindowToolGUID</key>
 			<string>1C78EAAD065D492600B07095</string>
 			<key>WindowToolIsVisible</key>
-			<true/>
+			<false/>
 		</dict>
 		<dict>
 			<key>Identifier</key>
