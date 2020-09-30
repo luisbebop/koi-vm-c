@@ -1,0 +1,17 @@
+/*
+Write a C program to find the sum of first 10 natural numbers
+*/
+#include<stdio.h>
+main()
+{
+    int a,b;
+    printf("This program work on first n Natural number sum\n");
+    printf("Input  Number      :");
+    scanf("%d",&a);
+    for (a;a<=2100;a++)
+    {
+        b=a+b;
+        printf("Sum of first %d number is %d\n",a,b);
+        break;
+    }
+}
